@@ -5,58 +5,84 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: tson <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/10/21 15:07:53 by tson              #+#    #+#             */
-/*   Updated: 2022/10/21 15:08:03 by tson             ###   ########.fr       */
+/*   Created: 2022/11/27 17:39:38 by tson              #+#    #+#             */
+/*   Updated: 2022/11/27 17:39:39 by tson             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../header/philo.h"
 
-long	get_time_gap(struct timeval start, struct timeval now)
+long long	get_time_gap_ms(struct timeval start, struct timeval cur)
 {
-	long	ret;
+	long long	ret;
 
-	ret = (now.tv_sec - start.tv_sec) * 1000000
-		+ (now.tv_usec - start.tv_usec);
+	ret = (cur.tv_usec - start.tv_usec) / 1000
+		+ (cur.tv_sec - start.tv_sec) * 1000;
 	return (ret);
 }
 
-int	ft_atoi(char *str) // INT_MAX보다 크거나 숫자가 아닌 값이 들어오면 -1반환
+int	ft_atoi(char *str)
 {
 	int		idx;
-	long	val;
+	long	ret;
 
 	idx = 0;
-	val = 0;
+	ret = 0;
 	while (str[idx])
 	{
 		if (!(str[idx] >= '0' && str[idx] <= '9'))
-			return (-1);
-		val *= 10;
-		val += str[idx] - '0';
-		if (val >= INT_MAX)
-			return (-1);
+			return (ATOI_FAIL);
+		ret *= 10;
+		ret += str[idx] - '0';
+		if (ret > INT32_MAX)
+			return (ATOI_FAIL);
 		idx++;
 	}
-	return ((int)val);
+	return ((int)ret);
 }
 
-t_arg	*make_args(t_pub *p_pub)
+int	is_correct_argv(int argc, char *argv[], t_program_arg *program_arg)
 {
-	int		i;
-	t_arg	*ret;
+	if (argc != 5 && argc != 6)
+		return (FALSE);
+	(*program_arg).philosopher_num = ft_atoi(argv[1]);
+	(*program_arg).die_time = ft_atoi(argv[2]);
+	(*program_arg).eat_time = ft_atoi(argv[3]);
+	(*program_arg).slp_time = ft_atoi(argv[4]);
+	if (argc == 6)
+		(*program_arg).min_num_of_eat = ft_atoi(argv[5]);
+	if ((*program_arg).philosopher_num == ATOI_FAIL
+		|| (*program_arg).die_time == ATOI_FAIL
+		|| (*program_arg).eat_time == ATOI_FAIL
+		|| (*program_arg).slp_time == ATOI_FAIL
+		|| (*program_arg).min_num_of_eat == ATOI_FAIL)
+		return (FALSE);
+	return (TRUE);
+}
 
-	ret = malloc(sizeof(t_arg) * (p_pub->info).num_of_philo);
-	if (ret == NULL)
-		return (0);
-	i = 0;
-	while (i < (p_pub->info).num_of_philo)
+void	msleep(int seconds)
+{
+	struct timeval	start_time;
+	struct timeval	cur_time;
+
+	gettimeofday(&start_time, NULL);
+	while (TRUE)
 	{
-		ret[i].p_pub = p_pub;
-		ret[i].philosopher_num = i;
-		ret[i].last_eat_time = (p_pub->info).start_time;
-		pthread_mutex_init(&ret[i].mutex_time, NULL);
-		i++;
+		gettimeofday(&cur_time, NULL);
+		if (get_time_gap_ms(start_time, cur_time) >= seconds)
+			return ;
+		usleep(100);
 	}
-	return (ret);
+}
+
+void	print_message(t_thread_arg *thread_arg, char *message)
+{
+	struct timeval	cur_time;
+	long long		time_gap;
+
+	pthread_mutex_lock(thread_arg->print_mutex);
+	gettimeofday(&cur_time, NULL);
+	time_gap = get_time_gap_ms(thread_arg->start_time, cur_time);
+	printf("%lld %d %s\n", time_gap, thread_arg->id, message);
+	pthread_mutex_unlock(thread_arg->print_mutex);
 }

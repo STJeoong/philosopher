@@ -5,8 +5,8 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: tson <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/10/21 15:08:07 by tson              #+#    #+#             */
-/*   Updated: 2022/10/21 15:15:04 by tson             ###   ########.fr       */
+/*   Created: 2022/12/19 23:07:55 by tson              #+#    #+#             */
+/*   Updated: 2022/12/19 23:07:56 by tson             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,110 +14,63 @@
 
 void	*t_main(void *arg)
 {
-	pthread_t		t;
-	long			from_start;
-	struct timeval	cur_time;
-	t_arg			*p_arg;
+	t_thread_arg	*thread_arg;
 
-	p_arg = (t_arg *)arg;
-	pthread_create(&t, NULL, is_over_die_time, arg);
-	pthread_detach(t);
-	while (1)
+	thread_arg = (t_thread_arg *)arg;
+	pthread_mutex_init(&(thread_arg->time_mutex), NULL);
+	if (thread_arg->id % 2 == 0)
+		usleep(thread_arg->program_arg.eat_time * 1000);
+	while (TRUE)
 	{
-		make_taking_fork_thread((t_arg *)arg);
-		gettimeofday(&cur_time, NULL);
-		from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-		pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-		printf("%ld %d is thinking\n", from_start, p_arg->philosopher_num);
-		pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
+		eating(thread_arg);
+		after_eating(thread_arg);
+		sleeping(thread_arg);
+		thinking(thread_arg);
 	}
 	return (NULL);
 }
 
-void	make_taking_fork_thread(t_arg *p_arg)
+void	eating(t_thread_arg *thread_arg)
 {
-	pthread_t		t1;
-	pthread_t		t2;
-	struct timeval	cur_time;
-	long			from_start;
+	int				p_num;
+	int				id;
 
-	pthread_create(&t1, NULL, take_left_fork, (void *)p_arg);
-	pthread_create(&t2, NULL, take_right_fork, (void *)p_arg);
-	pthread_join(t1, NULL);
-	pthread_join(t2, NULL);
-	gettimeofday(&cur_time, NULL);
-	from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-	printf("%ld %d is eating\n", from_start, p_arg->philosopher_num);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
-	usleep((p_arg->p_pub->info).time_to_eat);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).forks[p_arg->philosopher_num]);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).forks[(p_arg->philosopher_num + 1) % (p_arg->p_pub->info).num_of_philo]);
-	gettimeofday(&cur_time, NULL);
-	from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-	printf("%ld %d is sleeping\n", from_start, p_arg->philosopher_num);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
-	usleep((p_arg->p_pub->info).time_to_sleep);
+	p_num = thread_arg->program_arg.philosopher_num;
+	id = thread_arg->id;
+	pthread_mutex_lock(&(thread_arg->forks[id - 1]));
+	print_message(thread_arg, FRK_MES);
+	pthread_mutex_lock(&(thread_arg->forks[id % p_num]));
+	print_message(thread_arg, FRK_MES);
+	print_message(thread_arg, EAT_MES);
+	pthread_mutex_lock(&(thread_arg->time_mutex));
+	gettimeofday(&(thread_arg->last_eat_time), NULL);
+	pthread_mutex_unlock(&(thread_arg->time_mutex));
+	msleep(thread_arg->program_arg.eat_time);
 }
 
-void	*take_left_fork(void *arg)
+void	after_eating(t_thread_arg *thread_arg)
 {
-	struct timeval	cur_time;
-	long			from_start;
-	t_arg			*p_arg;
+	int	p_num;
+	int	id;
+	int	min_eat;
 
-	p_arg = (t_arg *)arg;
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).forks[p_arg->philosopher_num]);
-	gettimeofday(&cur_time, NULL);
-	from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-	printf("%ld %d has taken a fork\n", from_start, p_arg->philosopher_num);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
-	return (NULL);
+	p_num = thread_arg->program_arg.philosopher_num;
+	id = thread_arg->id;
+	min_eat = thread_arg->program_arg.min_num_of_eat;
+	pthread_mutex_unlock(&(thread_arg->forks[id - 1]));
+	pthread_mutex_unlock(&(thread_arg->forks[id % p_num]));
+	(thread_arg->eat_count)++;
+	if (min_eat != 0 && thread_arg->eat_count >= min_eat)
+		thread_arg->is_all_eat = TRUE;
 }
 
-void	*take_right_fork(void *arg)
+void	sleeping(t_thread_arg *thread_arg)
 {
-	struct timeval	cur_time;
-	long			from_start;
-	t_arg			*p_arg;
-
-	p_arg = (t_arg *)arg;
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).forks[(p_arg->philosopher_num + 1) % (p_arg->p_pub->info).num_of_philo]);
-	gettimeofday(&cur_time, NULL);
-	from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-	pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-	printf("%ld %d has taken a fork\n", from_start, p_arg->philosopher_num);
-	pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
-	return (NULL);
+	print_message(thread_arg, SLP_MES);
+	msleep(thread_arg->program_arg.slp_time);
 }
 
-void	*is_over_die_time(void *arg)
+void	thinking(t_thread_arg *thread_arg)
 {
-	struct timeval	cur_time;
-	long			from_start;
-	long			time_gap;
-	t_arg			*p_arg;
-
-	p_arg = (t_arg *)arg;
-	while (1)
-	{
-		gettimeofday(&cur_time, NULL);
-		pthread_mutex_lock(&(p_arg->mutex_time));
-		time_gap = get_time_gap(p_arg->last_eat_time, cur_time);
-		pthread_mutex_unlock(&(p_arg->mutex_time));
-		from_start = get_time_gap((p_arg->p_pub->info).start_time, cur_time);
-		if (time_gap >= (p_arg->p_pub->info).time_to_die)
-		{
-			pthread_mutex_lock(&(p_arg->p_pub->mutex).printf);
-			printf("%ld %d died\n", from_start, p_arg->philosopher_num);
-			pthread_mutex_lock(&(p_arg->p_pub->mutex).state);
-			(p_arg->p_pub->info).state = p_arg->philosopher_num;
-			pthread_mutex_unlock(&(p_arg->p_pub->mutex).state);
-			pthread_mutex_unlock(&(p_arg->p_pub->mutex).printf);
-			return (NULL);
-		}
-	}
-	return (NULL);
+	print_message(thread_arg, THK_MES);
 }

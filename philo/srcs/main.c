@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   test.c                                             :+:      :+:    :+:   */
+/*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: tson <marvin@42.fr>                        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/10/21 11:42:14 by tson              #+#    #+#             */
-/*   Updated: 2022/10/21 15:51:34 by tson             ###   ########.fr       */
+/*   Created: 2022/11/27 14:05:57 by tson              #+#    #+#             */
+/*   Updated: 2022/11/27 14:05:58 by tson             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,17 +14,16 @@
 
 int	main(int argc, char *argv[])
 {
-	t_pub	public;
-	t_arg	arg;
+	t_program_arg	program_arg;
+	t_thread_arg	*thread_args;
 
-	memset(&public, 0, sizeof(t_pub));
-	if (argc != 5 && argc != 6)
+	memset(&program_arg, 0, sizeof(t_program_arg));
+	if (is_correct_argv(argc, argv, &program_arg) == FALSE)
 		return (0);
-	if (set_pub(&public, argc, argv) == 0)
+	thread_args = make_thread_args(program_arg);
+	if (thread_args == NULL)
 		return (0);
-	if (make_philosophers(&public, &arg) == 0)
-		return (0);
-	check_philosophers_state(&public);
-	while (1);
+	sitdown_philosophers(thread_args);
+	observe_philosophers(thread_args);
 	return (0);
 }

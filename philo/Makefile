@@ -5,22 +5,21 @@
 #                                                     +:+ +:+         +:+      #
 #    By: tson <marvin@42.fr>                        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2022/10/18 10:58:28 by tson              #+#    #+#              #
-#    Updated: 2022/10/21 15:48:43 by tson             ###   ########.fr        #
+#    Created: 2022/11/27 14:04:25 by tson              #+#    #+#              #
+#    Updated: 2022/12/26 16:58:00 by tson             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
+
 NAME = philo
-CC = gcc
-CFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+CC = cc
+CFLAGS = -Wall -Wextra -Werror
 SRCS = srcs/main.c\
-	   srcs/check_finish.c\
 	   srcs/philosopher.c\
-	   srcs/set.c\
-	   srcs/utils.c
+	   srcs/utils.c\
+	   srcs/init_values.c\
+	   srcs/observe.c
 OBJS = ${SRCS:.c=.o}
-
-
 
 all : $(NAME)
 
@@ -38,4 +37,4 @@ fclean :
 
 re : fclean all
 
-.PHONY : all clean fclena re
+.PHONY : all clean fclean re
